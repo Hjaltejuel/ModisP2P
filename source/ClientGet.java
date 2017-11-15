@@ -1,3 +1,6 @@
+import com.sun.xml.internal.ws.encoding.MtomCodec;
+
+import java.io.*;
 import java.net.Socket;
 
 /**
@@ -16,14 +19,17 @@ public class ClientGet {
         Get();
     }
     private void Get(){
+        GetMessage message = new GetMessage(key, port, IP);
         try{
-            connectSocket = new Socket("IP", port);
+            connectSocket = new Socket(IP, port);
+            OutputStream out = connectSocket.getOutputStream();
+            ObjectOutput s = new ObjectOutputStream(out);
+            s.writeObject(message);
+            s.flush();
+            s.close();
         }
         catch(Exception e){
             e.printStackTrace();
         }
-    }
-    public static void main(String[] args){
-        System.out.println("Hello");
     }
 }
