@@ -1,4 +1,4 @@
-import com.sun.xml.internal.ws.encoding.MtomCodec;
+
 
 import java.io.*;
 import java.net.Socket;
@@ -23,6 +23,7 @@ public class ClientPut {
     private static void put(){
         PutMessage putMessage = new PutMessage(key,value);
         try{
+            System.out.println("Sending message from PutClient to ip: " + IP + " port: " + port + " key: " + key + " value: " + value);
             connectSocket = new Socket(IP, port);
             OutputStream out = connectSocket.getOutputStream();
             ObjectOutput s = new ObjectOutputStream(out);

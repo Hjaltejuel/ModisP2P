@@ -52,6 +52,7 @@ public class Node {
                 inputStream = socket.getInputStream();
                 ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
                 Message message = (Message) objectInputStream.readObject();
+
                 if(message instanceof PutMessage){
                     putMessage((PutMessage) message);
                     inputStream.close();
@@ -71,10 +72,12 @@ public class Node {
     }
     public static void putMessage(PutMessage message){
         valueMap.put(message.getKey(),message.getValue());
+        System.out.println("Inserted message with value: " + message.getValue() + " key: " + message.getKey());
 
     }
     public static void getMessage(GetMessage message) throws IOException {
         if(valueMap.containsKey(message.getKey())){
+            System.out.println("Sending back putmessage, value was found sending to port: " + message.getPort() + " ip: " +message.getIp());
             Socket socket = new Socket(message.getIp(),message.getPort());
             PutMessage putMessage = new PutMessage(message.getKey(),valueMap.get(message.getKey()));
             OutputStream out = socket.getOutputStream();
@@ -84,6 +87,7 @@ public class Node {
             stream.close();
         } else {
             if(coupledNodePort != 0 && coupledNodeIp!=null) {
+                System.out.println("Didnt find value proporgating to another node with port: " + coupledNodePort + " ip " + coupledNodeIp);
                 Socket socket = new Socket(coupledNodeIp, coupledNodePort);
                 OutputStream out = socket.getOutputStream();
                 ObjectOutput stream = new ObjectOutputStream(out);

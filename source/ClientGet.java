@@ -1,6 +1,9 @@
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.Random;
 
 /**
  * Created by Michelle on 11/15/2017.
@@ -10,23 +13,33 @@ public class ClientGet {
     static int key;
     static String ip;
     static PutMessage message = null;
+    static Random random = new Random();
 
     public static void main(String[] args){
         port = Integer.parseInt(args[1]);
         ip = args[0];
         key = Integer.parseInt(args[2]);
+
         get();
     }
 
     public static void get() {
         ServerSocket ser = null;
         Socket soc = null;
+        int portPersonal = random.nextInt(100)+8000;
+        String ipPersonal = null;
         try {
-            ser = new ServerSocket(port);
+            ipPersonal = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        try {
+            ser = new ServerSocket(portPersonal);
         /*
          * This will wait for a connection to be made to this socket.
          */
-            GetMessage getMessage = new GetMessage(key,port,ip);
+            System.out.println("Sending message from GetClient to ip: " + ip + " port: " + port + " With ip: " + ipPersonal + " port: " + portPersonal);
+            GetMessage getMessage = new GetMessage(key,portPersonal,ipPersonal);
             Socket socket = new Socket(ip, port);
             OutputStream out = socket.getOutputStream();
             ObjectOutput stream = new ObjectOutputStream(out);
@@ -38,6 +51,7 @@ public class ClientGet {
             InputStream o = soc.getInputStream();
             ObjectInput s = new ObjectInputStream(o);
             message = (PutMessage) s.readObject();
+            System.out.println("Recieved message: " + message.getValue().toString());
             s.close();
 
 
