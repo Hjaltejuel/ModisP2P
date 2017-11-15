@@ -1,35 +1,51 @@
-import com.sun.xml.internal.ws.encoding.MtomCodec;
-
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 
 /**
  * Created by Michelle on 11/15/2017.
  */
 public class ClientGet {
-    String IP;
-    int port;
-    int key;
-    Socket connectSocket;
-    public ClientGet(String IP, int port, int key){
-        connectSocket = null;
-        this.IP = IP;
-        this.port = port;
-        this.key = key;
-        Get();
+    static int port;
+    static int key;
+    static String ip;
+    static PutMessage message = null;
+
+    public static void main(String[] args){
+        port = Integer.parseInt(args[1]);
+        ip = args[0];
+        key = Integer.parseInt(args[2]);
+        get();
     }
-    private void Get(){
-        GetMessage message = new GetMessage(key, port, IP);
-        try{
-            connectSocket = new Socket(IP, port);
-            OutputStream out = connectSocket.getOutputStream();
-            ObjectOutput s = new ObjectOutputStream(out);
-            s.writeObject(message);
-            s.flush();
+
+    public static void get() {
+        ServerSocket ser = null;
+        Socket soc = null;
+        try {
+            ser = new ServerSocket(port);
+        /*
+         * This will wait for a connection to be made to this socket.
+         */
+            GetMessage getMessage = new GetMessage(key,port,ip);
+            Socket socket = new Socket(ip, port);
+            OutputStream out = socket.getOutputStream();
+            ObjectOutput stream = new ObjectOutputStream(out);
+            stream.writeObject(getMessage);
+            stream.flush();
+            stream.close();
+
+            soc = ser.accept();
+            InputStream o = soc.getInputStream();
+            ObjectInput s = new ObjectInputStream(o);
+            message = (PutMessage) s.readObject();
             s.close();
-        }
-        catch(Exception e){
-            e.printStackTrace();
+
+
+            // print out what we just received
+            System.out.println(message);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            System.exit(1);
         }
     }
 }
