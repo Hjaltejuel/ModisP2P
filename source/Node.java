@@ -1,52 +1,53 @@
 import java.io.*;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Created by Michelle on 11/15/2017.
  */
 public class Node {
-    private static String coupledNodeForwardIp;
-    private static int coupledNodeForwardPort;
-    private static String coupledNodeBackwardIP;
-    private static int coupledNodeBackwardPort;
-    private static int localPort;
+
+    private static RoutingInfo my;
+    private static RoutingInfo next;
+    private static RoutingInfo prev;
+    private static RoutingInfo prevPrev;
+    private static RoutingInfo first;
+
     private static HashMap<Integer,String>  valueMap;
 
     public static void main(String[] args){
-        localPort = Integer.parseInt(args[0]);
-        if(args.length == 3) {
-            coupledNodeForwardIp = args[1];
-            coupledNodeForwardPort = Integer.parseInt(args[2]);
-            join(coupledNodeForwardIp,coupledNodeForwardPort);
-        } else {
-            coupledNodeForwardIp = null;
-            coupledNodeForwardPort = 0;
-        }
-        valueMap = new HashMap<>();
+        try {
+            my = new RoutingInfo(InetAddress.getLocalHost().getHostAddress(),Integer.parseInt(args[0]));
+            if(args.length == 3) {
+                next = new RoutingInfo( args[1],Integer.parseInt(args[2]));
+                join(next);
+            } else {
+                first = my;
+                next = null;
+            }
+            valueMap = new HashMap<>();
 
-        inputHandling();
+            inputHandling();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+
 
 
     }
 
-    public static void join(String ip, int port){
-        System.out.println("Joining Node with port : " + localPort + " To Node with port : " + coupledNodeForwardPort);
-        try {
-            sendMessage(new JoinMessage(InetAddress.getLocalHost().getHostAddress(),localPort),ip,port);
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+    public static void join(RoutingInfo info){
+        System.out.println("Joining Node with port : " + my.getPort() + " To Node with port : " + info.getPort());
+        sendMessage(new JoinMessage(my),info);
 
     }
     public static void inputHandling(){
         Thread inputHandler = new Thread(()->{
             ServerSocket inSocket = null;
             try {
-                inSocket = new ServerSocket(localPort);
+                inSocket = new ServerSocket(my.getPort());
                 while(true){
                     Socket received = inSocket.accept();
                     messageHandler(received);
@@ -71,27 +72,42 @@ public class Node {
                 if(message instanceof PutMessage){
                     putMessage((PutMessage) message);
                     inputStream.close();
+
                 } else if ( message instanceof  GetMessage){
                     getMessage((GetMessage) message);
                     inputStream.close();
+
                 } else if(message instanceof JoinReplyMessage){
-                    coupledNodeBackwardIP = ((JoinReplyMessage) message).getIp();
-                    coupledNodeBackwardPort = ((JoinReplyMessage) message).getPort();
+                    prev = ((JoinReplyMessage) message).getRouteInfo();
+                    first = ((JoinReplyMessage) message).first;
+
+
                 } else if (message instanceof JoinMessage){
-                    if(coupledNodeBackwardIP!=null) {
-                        sendMessage(new JoinReplyMessage(coupledNodeBackwardIP, coupledNodeBackwardPort), ((JoinMessage) message).getIp(), ((JoinMessage) message).getPort());
-                    } else {
-                        sendMessage(new JoinReplyMessage(InetAddress.getLocalHost().getHostAddress(),localPort), ((JoinMessage) message).getIp(), ((JoinMessage) message).getPort());
+                    if(((JoinMessage) message).visisted == 0) {
+                        if (prev != null) {
+                            sendMessage(new JoinReplyMessage(prev,first), ((JoinMessage) message).getRouteInfo());
+                        } else {
+                            sendMessage(new JoinReplyMessage(first,first), ((JoinMessage) message).getRouteInfo());
+                        }
+                        prev = ((JoinMessage) message).getRouteInfo();
+
+
+                        if(next!=null){
+                            ((JoinMessage) message).visisted = 1;
+                            sendMessage(message,next);
+                        }
+
+                        System.out.println("Recieved join from Node with port : " + prev.getPort());
+                    }
+                    else {
+                        prevPrev = ((JoinMessage) message).getRouteInfo();
+                        System.out.println("SEEETING PREVPREV + " + prevPrev.getPort());
                     }
 
-                    coupledNodeBackwardIP = ((JoinMessage) message).getIp();
-                    coupledNodeBackwardPort = ((JoinMessage) message).getPort();
-
-                    System.out.println("Recieved join from Node with port : " + coupledNodeBackwardPort);
                 } else if (message instanceof  NodeMessage){
                     propagateNodeMessage((NodeMessage) message);
-                }
 
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (ClassNotFoundException e) {
@@ -116,18 +132,18 @@ public class Node {
         if(valueMap.containsKey(message.getMessage().getKey())){
             sendBackMessage(message.getMessage());
         } else {
-            if(message.getSenderID() != localPort) {
-                System.out.println("Didnt find value proporgating Backward to another node with port: " + coupledNodeBackwardPort + " ip " + coupledNodeBackwardIP);
-                sendMessage(message, coupledNodeBackwardIP, coupledNodeBackwardPort);
+            if(message.getSenderID() != my.getPort()) {
+                System.out.println("Didnt find value proporgating Backward to another node with port: " + prev.getPort() + " ip " + prev.getIp());
+                sendMessage(message, prev);
             }
-        } if(message.getSenderID() == localPort) {
+        } if(message.getSenderID() == my.getPort()) {
             System.out.println("The callstack has ended");
         }
     }
     public static void propagateGetMessage(GetMessage message){
-        NodeMessage nodeMessage = new NodeMessage(message,localPort);
-        System.out.println("Didnt find value proporgating backward to another node with port: " + coupledNodeBackwardPort + " ip " + coupledNodeBackwardIP);
-        sendMessage(nodeMessage,coupledNodeBackwardIP,coupledNodeBackwardPort);
+        NodeMessage nodeMessage = new NodeMessage(message,my.getPort());
+        System.out.println("Didnt find value proporgating Backward to another node with port: " + prev.getPort()+ " ip " + prev.getIp());
+        sendMessage(nodeMessage,prev);
 
 
 
@@ -148,15 +164,23 @@ public class Node {
         }
 
     }
-    public static void sendMessage(Message message, String ip, int port){
+    public static void handleFailure(Message message){
+                sendMessage(message,prevPrev);
+
+    }
+    public static void sendMessage(Message message, RoutingInfo routingInfo){
         Socket socket = null;
         try {
-            socket = new Socket(ip, port);
+            socket = new Socket(routingInfo.getIp(), routingInfo.getPort());
             OutputStream out = socket.getOutputStream();
             ObjectOutput stream = new ObjectOutputStream(out);
             stream.writeObject(message);
             stream.flush();
             stream.close();
+        } catch (ConnectException e) {
+            handleFailure(message);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
