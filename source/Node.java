@@ -74,7 +74,15 @@ public class Node {
                 } else if ( message instanceof  GetMessage){
                     getMessage((GetMessage) message);
                     inputStream.close();
+                } else if(message instanceof JoinReplyMessage){
+                    coupledNodeBackwardIP = ((JoinReplyMessage) message).getIp();
+                    coupledNodeBackwardPort = ((JoinReplyMessage) message).getPort();
                 } else if (message instanceof JoinMessage){
+                    if(coupledNodeBackwardIP!=null) {
+                        sendMessage(new JoinReplyMessage(coupledNodeBackwardIP, coupledNodeBackwardPort), ((JoinMessage) message).getIp(), ((JoinMessage) message).getPort());
+                    } else {
+                        sendMessage(new JoinReplyMessage(InetAddress.getLocalHost().getHostAddress(),localPort), ((JoinMessage) message).getIp(), ((JoinMessage) message).getPort());
+                    }
 
                     coupledNodeBackwardIP = ((JoinMessage) message).getIp();
                     coupledNodeBackwardPort = ((JoinMessage) message).getPort();
@@ -108,27 +116,19 @@ public class Node {
         if(valueMap.containsKey(message.getMessage().getKey())){
             sendBackMessage(message.getMessage());
         } else {
-            if (message.forward == true && coupledNodeForwardIp != null) {
-                System.out.println("Didnt find value proporgating foward to another node with port: " + coupledNodeForwardPort + " ip " + coupledNodeBackwardIP);
-                sendMessage(message, coupledNodeForwardIp, coupledNodeForwardPort);
-            } else {
-                if (message.forward == false &&coupledNodeBackwardIP != null) {
-                    System.out.println("Didnt find value proporgating backward to another node with port: " + coupledNodeBackwardPort + " ip " + coupledNodeBackwardIP);
-                    sendMessage(message, coupledNodeBackwardIP, coupledNodeBackwardPort);
-                }
+            if(message.getSenderID() != localPort) {
+                System.out.println("Didnt find value proporgating Backward to another node with port: " + coupledNodeBackwardPort + " ip " + coupledNodeBackwardIP);
+                sendMessage(message, coupledNodeBackwardIP, coupledNodeBackwardPort);
             }
+        } if(message.getSenderID() == localPort) {
+            System.out.println("The callstack has ended");
         }
-        System.out.println("The callstack in the direction forward = " + message.getDirection() + " has ended");
     }
     public static void propagateGetMessage(GetMessage message){
-        System.out.println("Didnt find value proporgating foward to another node with port: " + coupledNodeForwardPort + " ip " + coupledNodeBackwardIP);
-        if(coupledNodeForwardIp!= null) {
-            sendMessage(new NodeMessage(message, true), coupledNodeForwardIp, coupledNodeForwardPort);
-        }
-        if(coupledNodeBackwardIP!=null){
-            System.out.println("Didnt find value proporgating backward to another node with port: " + coupledNodeBackwardPort + " ip " + coupledNodeBackwardIP);
-            sendMessage(new NodeMessage(message,false),coupledNodeBackwardIP,coupledNodeBackwardPort);
-        }
+        NodeMessage nodeMessage = new NodeMessage(message,localPort);
+        System.out.println("Didnt find value proporgating backward to another node with port: " + coupledNodeBackwardPort + " ip " + coupledNodeBackwardIP);
+        sendMessage(nodeMessage,coupledNodeBackwardIP,coupledNodeBackwardPort);
+
 
 
     }

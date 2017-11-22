@@ -5,23 +5,22 @@ import java.io.Serializable;
  */
 public class NodeMessage implements Message, Serializable{
     GetMessage message;
-    boolean forward;
+    int SenderID;
 
-    public NodeMessage(GetMessage message, boolean forward){
+    public NodeMessage(GetMessage message, int senderID){
 
         this.message = message;
-        this.forward = forward;
+        this.SenderID = senderID;
+
     }
 
     public GetMessage getMessage(){
         return message;
     }
-    public boolean getDirection(){
-        return forward;
+    public int getSenderID(){
+        return SenderID;
     }
-    public void setDirection(boolean direction){
-        this.forward= direction;
-    }
+
 
 
 }
