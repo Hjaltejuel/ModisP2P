@@ -1,5 +1,9 @@
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 import java.awt.*;
 
 /**
@@ -14,6 +18,8 @@ public class GUI extends JFrame {
     private static JLabel NodeID = new JLabel();
     private static JPanel constraint = new JPanel(new GridBagLayout());
     private static JPanel prevPanel = new JPanel();
+
+
     private static JLabel prevLabel = new JLabel("PrevNodePortNumber");
 
     private static JPanel prevPanel2 = new JPanel();
@@ -30,7 +36,8 @@ public class GUI extends JFrame {
 
     private static JPanel prevPanel6 = new JPanel();
     private static JLabel prevLabel6 = new JLabel();
-
+    private static JTextArea area = new JTextArea(11,30);
+    private static int i = 0;
 
 
 
@@ -85,8 +92,28 @@ public class GUI extends JFrame {
 
 
 
+        area.setBackground(Color.LIGHT_GRAY);
+        area.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        area.append("   This is were actions on the given nodes are written :D");
+
+        JScrollPane jScrollPane = new JScrollPane(area,JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+
+        JPanel grid2 = new JPanel(new GridLayout(2,1));
+        JLabel label = new JLabel("CONSOLE OUTPUT",SwingConstants.CENTER);
+        label.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        grid2.add(label);
+        grid2.add(jScrollPane);
+        contentPane.add(grid2,BorderLayout.SOUTH);
+
+
 
     }
+    public static void append(String s){
+        area.append("\n   " + i + ": " + s);
+        i++;
+        area.validate();
+    }
+   
     public static void setTextOnJPanels(RoutingInfo prev, RoutingInfo next, RoutingInfo nextnext){
         if(prev!= null) {
             prevLabel4.setText("Portnumber : " + prev.getPort());
