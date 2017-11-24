@@ -13,10 +13,12 @@ public class Node {
     private static RoutingInfo next;
     private static RoutingInfo prev;
     private static RoutingInfo nextNext;
+    private static GUI gui;
 
     private static HashMap<Integer,String>  valueMap;
 
     public static void main(String[] args){
+
         try {
             my = new RoutingInfo(InetAddress.getLocalHost().getHostAddress(),Integer.parseInt(args[0]));
             if(args.length == 3) {
@@ -33,6 +35,8 @@ public class Node {
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
+        gui = new GUI(my.getPort());
+        gui.setTextOnJPanels(prev,next,nextNext);
 
 
 
@@ -87,6 +91,7 @@ public class Node {
                         //send back to the failure node to set its nextNext to this nodes next
                         sendMessage(new SetNextNextMessage(next), prev);
                         System.out.println("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: " + nextNext.getPort());
+                        gui.setTextOnJPanels(prev,next,nextNext);
                     } else{
                         //set nextNext to null, and connect this to the previous
                         System.out.println("Recieved failureMessage, restructing, there were only 3 nodes in the system");
@@ -94,15 +99,18 @@ public class Node {
                         next = ((FailureMessage) message).getInfo();
                         prev = ((FailureMessage) message).getInfo();
                         System.out.println("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
+                        gui.setTextOnJPanels(prev,next,nextNext);
                     }
 
                 } else if(message instanceof JoinReplyMessage) {
                     prev = ((JoinReplyMessage) message).getRouteInfo();
                     System.out.println("Recieved JoinReply Setting Prev to : " + ((JoinReplyMessage) message).getRouteInfo().getPort());
+                    gui.setTextOnJPanels(prev,next,nextNext);
 
                 } else if(message instanceof SetNextNextMessage){
                     nextNext = ((SetNextNextMessage) message).getNextNext();
                     System.out.println("Setting nextNext to : " + nextNext.getPort() );
+                    gui.setTextOnJPanels(prev,next,nextNext);
 
                 } else if (message instanceof JoinMessage){
                     //Hvis det er den første node der bliver connected til
@@ -113,6 +121,7 @@ public class Node {
                         prev= ((JoinMessage) message).getRouteInfo();
                         System.out.println("Prev : " + prev.getPort());
                         sendMessage(new JoinReplyMessage(my), ((JoinMessage) message).getRouteInfo());
+                        gui.setTextOnJPanels(prev,next,nextNext);
                     } else
                     //Recieved Join checking if it has been resend
                         if(((JoinMessage) message).visisted == 0) {
@@ -126,6 +135,7 @@ public class Node {
 
                             prev = ((JoinMessage) message).getRouteInfo();
                             System.out.println("Setting prev : " + prev.getPort());
+                            gui.setTextOnJPanels(prev,next,nextNext);
 
                         }
                          else  if (((JoinMessage) message).visisted == 1){
@@ -136,10 +146,12 @@ public class Node {
                             System.out.println("NextNext : " + nextNext.getPort());
                             System.out.println("Next : " + next.getPort());
                             sendMessage(message,prev);
+                            gui.setTextOnJPanels(prev,next,nextNext);
                         } else {
                             System.out.println("Recieved third joinmessage");
                                 nextNext = ((JoinMessage) message).getRouteInfo();
                             System.out.println("NextNext : " + ((JoinMessage) message).getRouteInfo().getPort());
+                            gui.setTextOnJPanels(prev,next,nextNext);
 
                         }
 
@@ -212,10 +224,12 @@ public class Node {
             nextNext = null;
             System.out.println("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
             sendMessage(new FailureMessage(failureInfo, my), next);
+            gui.setTextOnJPanels(prev,next,nextNext);
         } else {
             prev = null;
             next =null;
             nextNext = null;
+            gui.setTextOnJPanels(prev,next,nextNext);
         }
 
     }
