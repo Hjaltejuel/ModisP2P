@@ -21,6 +21,7 @@ public class Node {
             my = new RoutingInfo(InetAddress.getLocalHost().getHostAddress(),Integer.parseInt(args[0]));
             if(args.length == 3) {
                 next = new RoutingInfo( args[1],Integer.parseInt(args[2]));
+                System.out.println("Next : " + next.getPort());
                 join(next);
             } else {
                 prev = null;
@@ -78,54 +79,68 @@ public class Node {
                     inputStream.close();
                 }else if (message instanceof  FailureMessage) {
 
+                    //checking if there are only three nodes in the system, if there are 3 we set nextnext to null, and connect the node that send the failure info to prev and next
                     if(next.getPort()!=(((FailureMessage) message).getInfo().getPort())) {
+                        System.out.println("Recieved failureMessage, restructing");
+                        //set the prev to the non failing node
                         prev = ((FailureMessage) message).getInfo();
-                        sendMessage(new FailureReplyMessage(next), prev);
+                        //send back to the failure node to set its nextNext to this nodes next
+                        sendMessage(new SetNextNextMessage(next), prev);
+                        System.out.println("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: " + nextNext.getPort());
                     } else{
+                        //set nextNext to null, and connect this to the previous
+                        System.out.println("Recieved failureMessage, restructing, there were only 3 nodes in the system");
                         nextNext = null;
+                        next = ((FailureMessage) message).getInfo();
                         prev = ((FailureMessage) message).getInfo();
+                        System.out.println("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
                     }
-
-                } else if(message instanceof  FailureReplyMessage){
-
-                    nextNext = ((FailureReplyMessage) message).getNextNext();
 
                 } else if(message instanceof JoinReplyMessage) {
                     prev = ((JoinReplyMessage) message).getRouteInfo();
+                    System.out.println("Recieved JoinReply Setting Prev to : " + ((JoinReplyMessage) message).getRouteInfo().getPort());
 
                 } else if(message instanceof SetNextNextMessage){
                     nextNext = ((SetNextNextMessage) message).getNextNext();
-                    System.out.println("setting nextNext from port : " +  + my.getPort()+ " to : " + nextNext.getPort() );
+                    System.out.println("Setting nextNext to : " + nextNext.getPort() );
 
                 } else if (message instanceof JoinMessage){
-                    System.out.println("Recieved joinmessage from " + ((JoinMessage) message).getRouteInfo().getPort() + " to " + my.getPort());
                     //Hvis det er den første node der bliver connected til
                     if (next == null && prev == null) {
+                        System.out.println("Connecting first Node and establishing connections");
                         next  = ((JoinMessage) message).getRouteInfo();
+                        System.out.println("Next : " + next.getPort());
                         prev= ((JoinMessage) message).getRouteInfo();
+                        System.out.println("Prev : " + prev.getPort());
                         sendMessage(new JoinReplyMessage(my), ((JoinMessage) message).getRouteInfo());
                     } else
                     //Recieved Join checking if it has been resend
                         if(((JoinMessage) message).visisted == 0) {
-                            if(nextNext == null){
-                                System.out.println("Setting nextNext from port : " + my.getPort() + "to " + ((JoinMessage) message).getRouteInfo().getPort() );
-                                nextNext = ((JoinMessage) message).getRouteInfo();
+                            System.out.println("First Joinmessage recieved");
 
-                            }
                             //If we are inserting in the middle of the ring
                             ((JoinMessage) message).visisted = 1;
                             sendMessage(new JoinReplyMessage(prev), ((JoinMessage) message).getRouteInfo());
                             sendMessage(new SetNextNextMessage(next),((JoinMessage) message).getRouteInfo());
                             sendMessage(message, prev);
+
                             prev = ((JoinMessage) message).getRouteInfo();
+                            System.out.println("Setting prev : " + prev.getPort());
 
-
-                            System.out.println("Recieved join from Node with port : " + prev.getPort());
                         }
-                         else {
+                         else  if (((JoinMessage) message).visisted == 1){
+                            System.out.println("Recieved second joinmessage");
+                            ((JoinMessage) message).visisted = 2;
                             nextNext = next;
                             next = ((JoinMessage) message).getRouteInfo();
-                            System.out.println("SEEETING PREVPREV + " + nextNext.getPort());
+                            System.out.println("NextNext : " + nextNext.getPort());
+                            System.out.println("Next : " + next.getPort());
+                            sendMessage(message,prev);
+                        } else {
+                            System.out.println("Recieved third joinmessage");
+                                nextNext = ((JoinMessage) message).getRouteInfo();
+                            System.out.println("NextNext : " + ((JoinMessage) message).getRouteInfo().getPort());
+
                         }
 
                 } else if (message instanceof  NodeMessage){
@@ -148,6 +163,7 @@ public class Node {
     public static void getMessage(GetMessage message){
         if(valueMap.containsKey(message.getKey())){
             sendBackMessage(message);
+            System.out.println("Recieved getmessage, Found value, sending back");
         } else {
             propagateGetMessage(message);
         }
@@ -157,16 +173,16 @@ public class Node {
             sendBackMessage(message.getMessage());
         } else {
             if(message.getSenderID() != my.getPort()) {
-                System.out.println("Didnt find value proporgating Backward to another node with port: " + next.getPort() + " ip " + next.getIp());
+                System.out.println("Didnt find value proporgating Foward to Next with port: " + next.getPort() + " ip " + next.getIp());
                 sendMessage(message, next);
             }
         } if(message.getSenderID() == my.getPort()) {
-            System.out.println("The callstack has ended");
+            System.out.println("The callstack has ended no value was found");
         }
     }
     public static void propagateGetMessage(GetMessage message){
         NodeMessage nodeMessage = new NodeMessage(message,my.getPort());
-        System.out.println("Didnt find value proporgating Backward to another node with port: " + next.getPort()+ " ip " + next.getIp());
+        System.out.println("Didnt find value proporgating foward to Next with port: " + next.getPort()+ " ip " + next.getIp());
         sendMessage(nodeMessage,next);
 
 
@@ -190,11 +206,16 @@ public class Node {
     }
     public static void handleFailure(Message message, RoutingInfo failureInfo){
         if(nextNext!= null) {
-            System.out.println("Handling failure sending to port: " + nextNext.getPort());
+            System.out.println("Handling failure from Node with port : " + next.getPort() + " sending to nextNext with port: " + nextNext.getPort());
             sendMessage(message, nextNext);
             next = nextNext;
             nextNext = null;
+            System.out.println("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
             sendMessage(new FailureMessage(failureInfo, my), next);
+        } else {
+            prev = null;
+            next =null;
+            nextNext = null;
         }
 
     }
@@ -208,6 +229,7 @@ public class Node {
             stream.flush();
             stream.close();
         } catch (ConnectException e) {
+            System.out.println("Found failure");
             handleFailure(message,routingInfo);
         } catch (UnknownHostException e) {
             e.printStackTrace();
