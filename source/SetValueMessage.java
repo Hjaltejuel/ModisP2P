@@ -2,12 +2,13 @@
 import java.io.Serializable;
 
 /**
- * Created by Hjalte on 28-11-2017.
+ * SetValueMessage class
+ * Carries a single value
  */
-public class SetValuesMessage implements Message, Serializable {
+public class SetValueMessage implements Message, Serializable {
     int key;
     String val;
-    public SetValuesMessage(int key, String val){
+    public SetValueMessage(int key, String val){
         this.key = key;
         this.val = val;
     }
