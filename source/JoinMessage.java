@@ -1,7 +1,11 @@
+
+
 import java.io.Serializable;
 
 /**
- * Created by Hjalte on 22-11-2017.
+  The Messages.JoinMessage class
+  represents a join call to the node system
+  The Messages.Message is initiated when a new Program.Node wants to join the system
  */
 public class JoinMessage implements Message, Serializable {
     RoutingInfo routeInfo;
@@ -14,5 +18,13 @@ public class JoinMessage implements Message, Serializable {
 
     public RoutingInfo getRouteInfo() {
         return routeInfo;
+    }
+
+    public int getVisisted() {
+        return visisted;
+    }
+
+    public void setVisisted(int visisted) {
+        this.visisted = visisted;
     }
 }

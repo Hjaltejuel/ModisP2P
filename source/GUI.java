@@ -1,13 +1,12 @@
+
+
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.SimpleAttributeSet;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
 import java.awt.*;
+import java.util.HashMap;
 
 /**
- * Created by Hjalte on 24-11-2017.
+   Just a fun little extra class that i made to help analyse and test the node system
+
  */
 public class GUI extends JFrame {
     private static JFrame frame = new JFrame();
@@ -37,6 +36,7 @@ public class GUI extends JFrame {
     private static JPanel prevPanel6 = new JPanel();
     private static JLabel prevLabel6 = new JLabel();
     private static JTextArea area = new JTextArea(11,30);
+    private  static JTextArea values2 = new JTextArea(5,50);
     private static int i = 0;
 
 
@@ -66,7 +66,17 @@ public class GUI extends JFrame {
         NodePanel.setBackground(Color.GRAY);
         NodeID.setText("NodePortNumber : " +nodeID);
         node.add(grid);
-        constraint.add(node);
+        JPanel top = new JPanel(new GridLayout(0,1));
+
+        top.add(node);
+        values2.setBackground(Color.LIGHT_GRAY);
+        values2.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        values2.append("Here the key value set will appear when changed");
+        JScrollPane jScrollPane2 = new JScrollPane(values2,JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
+        top.add(jScrollPane2);
+
+        constraint.add(top);
+
         prevPanel.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         prevPanel2.setBorder(BorderFactory.createLineBorder(Color.BLACK));
         prevPanel3.setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -107,6 +117,15 @@ public class GUI extends JFrame {
 
 
 
+    }
+    public static void appendValues(HashMap<Integer,String> myMap){
+        values2.setText("Current configuration :");
+
+        for(Integer s: myMap.keySet()){
+            values2.append("\n   Key: " +  s + " Val: " + myMap.get(s));
+        }
+
+        values2.validate();
     }
     public static void append(String s){
         area.append("\n   " + i + ": " + s);

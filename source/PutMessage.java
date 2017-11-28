@@ -1,7 +1,9 @@
+
 import java.io.Serializable;
 
 /**
- * Created by Michelle on 11/15/2017.
+    The Messages.PutMessage class
+    The message that when a node recieves will input its key/val
  */
 public class PutMessage implements Message, Serializable {
     private int key;

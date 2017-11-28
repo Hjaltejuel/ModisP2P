@@ -1,7 +1,10 @@
+
+
 import java.io.Serializable;
 
 /**
- * Created by Michelle on 11/15/2017.
+ * The get message class
+ * represents a getMessage to the node system
  */
 public class GetMessage implements Message, Serializable
 {

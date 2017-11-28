@@ -1,8 +1,7 @@
+
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 /**
  * Created by Michelle on 11/15/2017.
@@ -15,7 +14,8 @@ public class Node {
     private static RoutingInfo nextNext;
     private static GUI gui;
 
-    private static HashMap<Integer,String>  valueMap;
+    private static HashMap<Integer,String>  myMap;
+    private static HashMap<Integer,String> nextMap;
 
     public static void main(String[] args){
 
@@ -25,13 +25,15 @@ public class Node {
             gui = new GUI(my.getPort());
             if(args.length == 3) {
                 next = new RoutingInfo( args[1],Integer.parseInt(args[2]));
+                sendMessage(new RequestUpdateValuesMessage(my),next);
                 gui.append("Next : " + next.getPort());
                 join(next);
             } else {
                 prev = null;
                 next = null;
             }
-            valueMap = new HashMap<>();
+            myMap = new HashMap<>();
+            nextMap = new HashMap<>();
 
             inputHandling();
         } catch (UnknownHostException e) {
@@ -45,7 +47,7 @@ public class Node {
     }
 
     public static void join(RoutingInfo info){
-        gui.append("Joining Node with port : " + my.getPort() + " To Node with port : " + info.getPort());
+        gui.append("Joining Program.Node with port : " + my.getPort() + " To Program.Node with port : " + info.getPort());
         
         sendMessage(new JoinMessage(my),info);
 
@@ -80,11 +82,24 @@ public class Node {
                     putMessage((PutMessage) message);
                     inputStream.close();
 
-                } else if ( message instanceof  GetMessage) {
+                } else if ( message instanceof GetMessage) {
                     getMessage((GetMessage) message);
                     inputStream.close();
-                }else if (message instanceof  FailureMessage) {
+                } else if (message instanceof RequestUpdateValuesMessage){
+                    sendMessage(new SendValuesMessage(myMap),((RequestUpdateValuesMessage) message).getToRoute());
+                }
+                else if (message instanceof  SendValuesMessage){
+                    nextMap.putAll(((SendValuesMessage) message).getNext());
 
+                }
+                else  if(message instanceof SetValuesMessage){
+                    myMap.put(((SetValuesMessage) message).getKey(),((SetValuesMessage) message).getVal());
+                    showMapsInGui();
+
+
+                    gui.append("Inserted message with value: " +((SetValuesMessage) message).getVal() + " key: " +((SetValuesMessage) message).getKey());
+                }
+                else if (message instanceof FailureMessage) {
                     //checking if there are only three nodes in the system, if there are 3 we set nextnext to null, and connect the node that send the failure info to prev and next
                     if(next.getPort()!=(((FailureMessage) message).getInfo().getPort())) {
                         gui.append("Recieved failureMessage, restructing");
@@ -92,7 +107,7 @@ public class Node {
                         prev = ((FailureMessage) message).getInfo();
                         //send back to the failure node to set its nextNext to this nodes next
                         sendMessage(new SetNextNextMessage(next), prev);
-                        gui.append("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: " + nextNext.getPort());
+                        gui.append("Current Program.Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: " + nextNext.getPort());
                         gui.setTextOnJPanels(prev,next,nextNext);
                     } else{
                         //set nextNext to null, and connect this to the previous
@@ -100,7 +115,7 @@ public class Node {
                         nextNext = null;
                         next = ((FailureMessage) message).getInfo();
                         prev = ((FailureMessage) message).getInfo();
-                        gui.append("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
+                        gui.append("Current Program.Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
                         gui.setTextOnJPanels(prev,next,nextNext);
                     }
 
@@ -117,20 +132,22 @@ public class Node {
                 } else if (message instanceof JoinMessage){
                     //Hvis det er den første node der bliver connected til
                     if (next == null && prev == null) {
-                        gui.append("Connecting first Node and establishing connections");
-                        next  = ((JoinMessage) message).getRouteInfo();
+                        gui.append("Connecting first Program.Node and establishing connections");
+                        next = ((JoinMessage) message).getRouteInfo();
                         gui.append("Next : " + next.getPort());
                         prev= ((JoinMessage) message).getRouteInfo();
                         gui.append("Prev : " + prev.getPort());
                         sendMessage(new JoinReplyMessage(my), ((JoinMessage) message).getRouteInfo());
+
+                        sendMessage(new RequestUpdateValuesMessage(my),next);
                         gui.setTextOnJPanels(prev,next,nextNext);
                     } else
                     //Recieved Join checking if it has been resend
-                        if(((JoinMessage) message).visisted == 0) {
+                        if(((JoinMessage) message).getVisisted()== 0) {
                             gui.append("First Joinmessage recieved");
 
                             //If we are inserting in the middle of the ring
-                            ((JoinMessage) message).visisted = 1;
+                            ((JoinMessage) message).setVisisted(1);
                             sendMessage(new JoinReplyMessage(prev), ((JoinMessage) message).getRouteInfo());
                             sendMessage(new SetNextNextMessage(next),((JoinMessage) message).getRouteInfo());
                             sendMessage(message, prev);
@@ -140,14 +157,15 @@ public class Node {
                             gui.setTextOnJPanels(prev,next,nextNext);
 
                         }
-                         else  if (((JoinMessage) message).visisted == 1){
+                         else  if (((JoinMessage) message).getVisisted() == 1){
                             gui.append("Recieved second joinmessage");
-                            ((JoinMessage) message).visisted = 2;
+                            ((JoinMessage) message).setVisisted(2);
                             nextNext = next;
                             next = ((JoinMessage) message).getRouteInfo();
                             gui.append("NextNext : " + nextNext.getPort());
                             gui.append("Next : " + next.getPort());
                             sendMessage(message,prev);
+                            sendMessage(new RequestUpdateValuesMessage(my),next);
                             gui.setTextOnJPanels(prev,next,nextNext);
                         } else {
                             gui.append("Recieved third joinmessage");
@@ -170,12 +188,18 @@ public class Node {
         MessageHandler.start();
     }
     public static void putMessage(PutMessage message){
-        valueMap.put(message.getKey(),message.getValue());
-        gui.append("Inserted message with value: " + message.getValue() + " key: " + message.getKey());
+        if(next!= null) {
+            nextMap.put(message.getKey(),message.getValue());
+            sendMessage(new SetValuesMessage(message.getKey(), message.getValue()), next);
+        } else {
+            myMap.put(message.getKey(), message.getValue());
+            showMapsInGui();
+        }
 
     }
+
     public static void getMessage(GetMessage message){
-        if(valueMap.containsKey(message.getKey())){
+        if(myMap.containsKey(message.getKey())){
             sendBackMessage(message);
             gui.append("Recieved getmessage, Found value, sending back");
         } else {
@@ -183,7 +207,7 @@ public class Node {
         }
     }
     public static void propagateNodeMessage(NodeMessage message){
-        if(valueMap.containsKey(message.getMessage().getKey())){
+        if(myMap.containsKey(message.getMessage().getKey())){
             sendBackMessage(message.getMessage());
         } else {
             if(message.getSenderID() != my.getPort()) {
@@ -207,7 +231,7 @@ public class Node {
         Socket socket = null;
         try {
             socket = new Socket(message.getIp(),message.getPort());
-            PutMessage putMessage = new PutMessage(message.getKey(),valueMap.get(message.getKey()));
+            PutMessage putMessage = new PutMessage(message.getKey(),myMap.get(message.getKey()));
             OutputStream out = socket.getOutputStream();
             ObjectOutput stream = new ObjectOutputStream(out);
             stream.writeObject(putMessage);
@@ -219,21 +243,51 @@ public class Node {
 
     }
     public static void handleFailure(Message message, RoutingInfo failureInfo){
+        addValues();
         if(nextNext!= null) {
-            gui.append("Handling failure from Node with port : " + next.getPort() + " sending to nextNext with port: " + nextNext.getPort());
-            sendMessage(message, nextNext);
+            gui.append("Handling failure from Program.Node with port : " + next.getPort() + " sending to nextNext with port: " + nextNext.getPort());
+            if(message instanceof NodeMessage){
+                if(myMap.containsKey(((NodeMessage) message).getMessage().getKey())){
+                    sendBackMessage(((NodeMessage) message).getMessage());
+                } else {
+                    sendMessage(message, nextNext);
+                }
+            } else {
+                sendMessage(message, nextNext);
+            }
             next = nextNext;
+            sendMessage(new SetNextNextMessage(next),prev);
+            sendMessage(new RequestUpdateValuesMessage(my),next);
             nextNext = null;
-            gui.append("Current Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
+            gui.append("Current Program.Node connections Prev: " + prev.getPort() + " ------- My: " + my.getPort() + " ------- Next: " + next.getPort() + " ------- NextNext: Null");
             sendMessage(new FailureMessage(failureInfo, my), next);
             gui.setTextOnJPanels(prev,next,nextNext);
+
         } else {
             prev = null;
             next =null;
             nextNext = null;
+            if(message instanceof  NodeMessage){
+                if(myMap.containsKey(((NodeMessage) message).getMessage().getKey())) {
+                    sendBackMessage(((NodeMessage) message).getMessage());
+                }
+            }
+            if(message instanceof SetValuesMessage){
+                myMap.put(((SetValuesMessage) message).getKey(),((SetValuesMessage) message).getVal());
+                showMapsInGui();
+
+            }
             gui.setTextOnJPanels(prev,next,nextNext);
         }
 
+
+    }
+    public static void addValues(){
+        myMap.putAll(nextMap);
+        showMapsInGui();
+    }
+    public static void showMapsInGui(){
+        gui.appendValues(myMap);
     }
     public static void sendMessage(Message message, RoutingInfo routingInfo){
         Socket socket = null;

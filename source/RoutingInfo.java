@@ -1,7 +1,10 @@
+
+
 import java.io.Serializable;
 
 /**
- * Created by Hjalte on 22-11-2017.
+   The Messages.RoutingInfo class
+    To simplify a connection
  */
 public class RoutingInfo implements Serializable {
     private int port;

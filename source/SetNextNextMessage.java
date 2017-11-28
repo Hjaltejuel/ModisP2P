@@ -1,7 +1,9 @@
+
 import java.io.Serializable;
 
 /**
- * Created by Michelle on 23-11-2017.
+   The setNextNextMessage class
+    When a node recieves will set its nextnext
  */
 public class SetNextNextMessage implements Message, Serializable {
     RoutingInfo nextNext;

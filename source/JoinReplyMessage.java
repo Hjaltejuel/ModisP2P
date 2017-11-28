@@ -1,7 +1,8 @@
-import java.io.Serializable;
 
 /**
- * Created by Hjalte on 22-11-2017.
+    The Messages.JoinReplyMessage class
+    Send when a Program.Node recieves a Messages.JoinMessage
+
  */
 public class JoinReplyMessage extends JoinMessage {
 

@@ -1,10 +1,11 @@
 
-
 import java.io.*;
 import java.net.Socket;
 
 /**
- * Created by Michelle on 11/15/2017.
+ * The put client of this system
+ * sends out a put message and terminates.
+ * This could have been included in the node system, but for simplicity we choose to exclude it
  */
 public class ClientPut {
     static String IP;
@@ -18,9 +19,9 @@ public class ClientPut {
         port = Integer.parseInt(args[1]);
         key = Integer.parseInt(args[2]);
         value = args[3];
-        put();
+        start();
     }
-    private static void put(){
+    private static void start(){
         PutMessage putMessage = new PutMessage(key,value);
         try{
             System.out.println("Sending message from PutClient to ip: " + IP + " port: " + port + " key: " + key + " value: " + value);

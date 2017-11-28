@@ -1,7 +1,10 @@
+
 import java.io.Serializable;
 
 /**
- * Created by Hjalte on 22-11-2017.
+    The Messages.NodeMessage class
+    Send when nodes wants to foward a get message between them
+    If the senderID recieves a Messages.NodeMessage with its own id it terminates the call
  */
 public class NodeMessage implements Message, Serializable{
     GetMessage message;
